@@ -4,7 +4,10 @@
     <title>Facebook pages API sample</title>
   </head>
   <body>
-
+    <div id="status"></div>
+    <div id="pages">
+      <ul style="list-style: none;"></ul>
+    </div>
     <script>
       function statusChangeCallback(response) {
         console.log('statusChangeCallback');
@@ -28,16 +31,6 @@
         });
       }
 
-      window.fbAsyncInit = function() {
-        FB.init({
-          appId            : '1036383073075658',
-          autoLogAppEvents : true,
-          xfbml            : true,
-          version          : 'v2.10'
-        });
-        checkLoginState();
-      };
-
       (function(d, s, id){
          var js, fjs = d.getElementsByTagName(s)[0];
          if (d.getElementById(id)) {return;}
@@ -46,28 +39,59 @@
          fjs.parentNode.insertBefore(js, fjs);
        }(document, 'script', 'facebook-jssdk'));
 
-      function testAPI() {
-        console.log('Welcome!  Fetching your information.... ');
-        FB.api('/me', function(response) {
-          console.log(response);
-          FB.api(
-              response.id + '/accounts',
-              function(response) {
-                if (response && !response.error) {
-                  console.log('Result of pages call', response);
-                }
-              });
-          console.log('Successful login for: ' + response.name);
-          document.getElementById('status').innerHTML =
-            'Thanks for logging in, ' + response.name + '!';
+      function getPageDetails(data, node) {
+        console.log(`Fetching details of page ${data.name}`);
+        FB.api( '/' + data.id + '/picture', function (response) {
+          if (response && !response.error) {
+            console.log('Page thumbnail', response);
+            const liElem = document.createElement('li');
+            const imgElem = document.createElement('img');
+            imgElem.setAttribute('src', response.data.url);
+            liElem.appendChild(document.createTextNode(data.name));
+            liElem.appendChild(imgElem);
+            node.appendChild(liElem);
+          }
         });
       }
+
+      function testAPI() {
+        console.log('Welcome!  Fetching your information.... ');
+        const ul = document.querySelector("#pages ul");
+        FB.api('/me', function(response) {
+          console.log(response);
+          FB.api(response.id + '/accounts', function(response) {
+            if (response && !response.error) {
+              console.log('Result of pages call', response);
+              const { data } = response;
+              data.forEach(pageData => {
+                getPageDetails(pageData, ul);
+              });
+            }
+          });
+          console.log('Successful login for: ' + response.name);
+          document.getElementById('status').innerHTML = 'Thanks for logging in, ' + response.name + '!';
+        });
+      }
+
+      fetch('http://localhost:3000/app-details').then(function(response) {
+        return response.json();
+      }).then(data => {
+        console.log(data);
+        window.fbAsyncInit = function() {
+          FB.init({
+            appId            : data.app_id,
+            autoLogAppEvents : true,
+            xfbml            : true,
+            version          : 'v2.10'
+          });
+          checkLoginState();
+        };
+      });
     </script>
     <fb:login-button
         autologoutlink="true"
         scope="public_profile,email,manage_pages"
         onlogin="checkLoginState();">
     </fb:login-button>
-    <div id="status"></div>
   </body>
 </html>
